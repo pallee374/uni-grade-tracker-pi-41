@@ -3,17 +3,26 @@ import { useState, useEffect } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from "recharts";
-import { getDashboardAnalytics } from "@/utils/gradeUtils";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { getDashboardAnalytics, getExamStats } from "@/utils/gradeUtils";
 
 const Dashboard = () => {
   const [analytics, setAnalytics] = useState<any>(null);
   const [loading, setLoading] = useState(true);
+  const [selectedExamId, setSelectedExamId] = useState<string | null>(null);
+  const [examStats, setExamStats] = useState<any>(null);
 
   useEffect(() => {
     const loadData = () => {
       try {
         const data = getDashboardAnalytics();
         setAnalytics(data);
+        
+        // Set the first exam as selected by default if available
+        if (data.recentExams.length > 0 && !selectedExamId) {
+          setSelectedExamId(data.recentExams[0].id);
+          setExamStats(getExamStats(data.recentExams[0].id));
+        }
       } catch (error) {
         console.error("Error loading analytics:", error);
       } finally {
@@ -23,6 +32,12 @@ const Dashboard = () => {
 
     loadData();
   }, []);
+
+  const handleExamChange = (examId: string) => {
+    setSelectedExamId(examId);
+    const stats = getExamStats(examId);
+    setExamStats(stats);
+  };
 
   const prepareChartData = () => {
     if (!analytics?.courseStats) return [];
@@ -35,9 +50,10 @@ const Dashboard = () => {
   };
 
   const prepareDistributionData = () => {
-    if (!analytics?.overallStats?.distribution) return [];
+    // Use selected exam stats if available, otherwise use overall stats
+    const distribution = examStats?.distribution || analytics?.overallStats?.distribution;
+    if (!distribution) return [];
     
-    const distribution = analytics.overallStats.distribution;
     return Object.keys(distribution).map(key => ({
       grade: key,
       count: distribution[key]
@@ -96,21 +112,44 @@ const Dashboard = () => {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">
-              {analytics?.overallStats?.average || 0}
+              {examStats?.average || analytics?.overallStats?.average || 0}
             </div>
             <p className="text-xs text-muted-foreground">
-              Media di tutti i voti registrati
+              Media dei voti {selectedExamId ? 'dell\'esame selezionato' : 'registrati'}
             </p>
           </CardContent>
         </Card>
       </div>
+      
+      <Card className="mb-4">
+        <CardHeader>
+          <CardTitle>Seleziona Esame</CardTitle>
+          <CardDescription>
+            Visualizza le statistiche per uno specifico esame
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <Select value={selectedExamId || undefined} onValueChange={handleExamChange}>
+            <SelectTrigger className="w-full">
+              <SelectValue placeholder="Seleziona un esame" />
+            </SelectTrigger>
+            <SelectContent>
+              {analytics?.recentExams.map((exam: any) => (
+                <SelectItem key={exam.id} value={exam.id}>
+                  {exam.courseName} - {exam.type === 'intermedio' ? 'Intermedio' : 'Completo'} ({exam.date})
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </CardContent>
+      </Card>
       
       <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
         <Card className="col-span-1">
           <CardHeader>
             <CardTitle>Distribuzione dei voti</CardTitle>
             <CardDescription>
-              Frequenza dei voti assegnati
+              {selectedExamId ? "Per l'esame selezionato" : "Tutti gli esami"}
             </CardDescription>
           </CardHeader>
           <CardContent className="h-80">

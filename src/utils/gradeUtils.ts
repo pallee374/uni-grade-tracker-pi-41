@@ -1,3 +1,4 @@
+
 import { Course, Exam, Grade, GradeStats, LetterGrade } from "@/types";
 import { getCourses, getExams, getGrades, getStudents } from "./dataStorage";
 
@@ -175,7 +176,7 @@ export const getDashboardAnalytics = () => {
   // Recent exams
   const recentExams = [...exams]
     .sort((a, b) => new Date(b.data).getTime() - new Date(a.data).getTime())
-    .slice(0, 5)
+    .slice(0, 10) // Show more exams for selection
     .map(exam => {
       const course = courses.find(c => c.id === exam.courseId);
       const stats = getExamStats(exam.id);
