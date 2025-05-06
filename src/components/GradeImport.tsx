@@ -42,16 +42,15 @@ const GradeImport = ({ onComplete }: GradeImportProps) => {
       const course = courses.find(c => c.id === courseId) || null;
       setSelectedCourse(course);
       
-      // Imposta il tipo di esame basato sul tipo di valutazione del corso
-      if (course && course.haIntermedio && examType === 'completo') {
-        setExamType('intermedio');
-      } else if (course && !course.haIntermedio && examType === 'intermedio') {
-        setExamType('completo');
+      // Set exam type based on course evaluation type
+      if (course) {
+        // If course is found, set the exam type accordingly
+        setExamType(course.haIntermedio ? 'intermedio' : 'completo');
       }
     } else {
       setSelectedCourse(null);
     }
-  }, [courseId, courses, examType]);
+  }, [courseId, courses]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -78,7 +77,7 @@ const GradeImport = ({ onComplete }: GradeImportProps) => {
       const result = importGradesFromCSV({
         csvData,
         courseId,
-        examType,
+        examType: selectedCourse?.haIntermedio ? 'intermedio' : 'completo',
         examDate,
         isNewExam,
         hasHeaderRow
@@ -123,34 +122,14 @@ const GradeImport = ({ onComplete }: GradeImportProps) => {
           </div>
 
           <div>
-            <Label htmlFor="examType">Tipo di esame</Label>
-            <Select 
-              value={examType} 
-              onValueChange={setExamType as (value: string) => void}
-              disabled={selectedCourse !== null}
-            >
-              <SelectTrigger>
-                <SelectValue placeholder="Seleziona il tipo di esame" />
-              </SelectTrigger>
-              <SelectContent>
-                {selectedCourse?.haIntermedio ? (
-                  <SelectItem value="intermedio">Valutazione in lettere</SelectItem>
-                ) : (
-                  <SelectItem value="completo">Valutazione numerica</SelectItem>
-                )}
-              </SelectContent>
-            </Select>
+            <Label htmlFor="examDate">Data dell'esame</Label>
+            <Input 
+              id="examDate"
+              type="date" 
+              value={examDate} 
+              onChange={(e) => setExamDate(e.target.value)}
+            />
           </div>
-        </div>
-
-        <div>
-          <Label htmlFor="examDate">Data dell'esame</Label>
-          <Input 
-            id="examDate"
-            type="date" 
-            value={examDate} 
-            onChange={(e) => setExamDate(e.target.value)}
-          />
         </div>
 
         <div className="flex items-center space-x-2">
@@ -194,6 +173,7 @@ const GradeImport = ({ onComplete }: GradeImportProps) => {
               <ul className="list-disc pl-5 space-y-1">
                 <li><code>matricola</code>: La matricola dello studente (obbligatorio)</li>
                 <li><code>voto</code>: Voto letterale da A a F (obbligatorio)</li>
+                <li>Nota: A (30), B (28-29), C (25-27), D (22-24), E (18-21), F (insufficiente)</li>
               </ul>
             ) : (
               <ul className="list-disc pl-5 space-y-1">

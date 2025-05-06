@@ -1,5 +1,6 @@
 
 import { Student, Course, Exam, Grade, ExamType, LetterGrade } from "@/types";
+import { numericToLetter } from "./gradeUtils";
 
 // Local storage keys
 const STUDENTS_KEY = "sgvu_students";
@@ -377,6 +378,14 @@ export const importGradesFromCSV = (options: GradeImportOptions): ImportResult =
   const students = getStudents();
   const matricoleSet = new Set(students.map(s => s.matricola));
   
+  // Get course for type information
+  const courses = getCourses();
+  const course = courses.find(c => c.id === courseId);
+  
+  if (!course) {
+    throw new Error("Course not found");
+  }
+  
   for (let i = startIndex; i < rows.length; i++) {
     const columns = rows[i].split(',').map(col => col.trim());
     
@@ -394,22 +403,30 @@ export const importGradesFromCSV = (options: GradeImportOptions): ImportResult =
         continue;
       }
       
-      if (examType === 'intermedio') {
-        // For intermediate exams, expect letter grade
-        const votoLettera = columns[1].toUpperCase();
+      if (course.haIntermedio) {
+        // For letter grade courses
+        let letterGrade: LetterGrade;
         
-        if (!['A', 'B', 'C', 'D', 'E', 'F'].includes(votoLettera)) {
-          errors++;
-          continue;
+        // Check if the input is a letter or a number
+        if (['A', 'B', 'C', 'D', 'E', 'F'].includes(columns[1].toUpperCase())) {
+          letterGrade = columns[1].toUpperCase() as LetterGrade;
+        } else {
+          // If it's a number, convert it to a letter grade
+          const numericGrade = parseFloat(columns[1]);
+          if (isNaN(numericGrade) || numericGrade < 0) {
+            errors++;
+            continue;
+          }
+          letterGrade = numericToLetter(numericGrade);
         }
         
         addGrade({
           matricola,
           examId: exam.id,
-          votoLettera: votoLettera as LetterGrade
+          votoLettera: letterGrade
         });
       } else {
-        // For complete exams, expect numeric grade and optional lode
+        // For numeric grade courses
         const votoNumerico = parseInt(columns[1]);
         
         if (isNaN(votoNumerico) || votoNumerico < 18 || votoNumerico > 30) {

@@ -6,13 +6,23 @@ import { getCourses, getExams, getGrades, getStudents } from "./dataStorage";
 export const letterToNumeric = (letter: LetterGrade): number => {
   const mapping: Record<LetterGrade, number> = {
     'A': 30,
-    'B': 27,
-    'C': 24,
-    'D': 21,
-    'E': 18,
+    'B': 28.5, // average of 28-29
+    'C': 26, // average of 25-27
+    'D': 23, // average of 22-24
+    'E': 19.5, // average of 18-21
     'F': 0
   };
   return mapping[letter];
+};
+
+// Convert numeric grade to letter equivalent
+export const numericToLetter = (numeric: number): LetterGrade => {
+  if (numeric >= 30) return 'A';
+  if (numeric >= 28) return 'B';
+  if (numeric >= 25) return 'C';
+  if (numeric >= 22) return 'D';
+  if (numeric >= 18) return 'E';
+  return 'F';
 };
 
 // Format grade for display
