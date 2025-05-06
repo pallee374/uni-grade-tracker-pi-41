@@ -86,14 +86,15 @@ const GradeEntry = ({ onComplete }: GradeEntryProps) => {
       const course = courses.find(c => c.id === watchCourseId) || null;
       setSelectedCourse(course);
       
-      // If the course doesn't have intermediates, force complete exam type
-      if (course && !course.haIntermedio && watchExamType === 'intermedio') {
-        setValue('examType', 'completo');
+      // Imposta il tipo di esame basato sul tipo di valutazione del corso
+      if (course) {
+        const newExamType = course.haIntermedio ? 'intermedio' : 'completo';
+        setValue('examType', newExamType);
       }
     } else {
       setSelectedCourse(null);
     }
-  }, [watchCourseId, courses, setValue, watchExamType]);
+  }, [watchCourseId, courses, setValue]);
   
   // Filter exams based on selected course
   const filteredExams = watchCourseId 
@@ -109,15 +110,16 @@ const GradeEntry = ({ onComplete }: GradeEntryProps) => {
         return;
       }
       
-      let examId = data.examType === 'intermedio' && !newExam 
-        ? filteredExams.find(e => e.tipo === 'intermedio')?.id 
+      let examId = !newExam && filteredExams.length > 0
+        ? filteredExams[0].id
         : '';
       
       // Create new exam if needed
       if (newExam || !examId) {
+        const examType = selectedCourse?.haIntermedio ? 'intermedio' : 'completo';
         const newExamData = await addExam({
           courseId: data.courseId,
-          tipo: data.examType,
+          tipo: examType,
           data: data.examDate
         });
         examId = newExamData.id;
@@ -129,8 +131,8 @@ const GradeEntry = ({ onComplete }: GradeEntryProps) => {
         examId
       };
       
-      // Add the appropriate grade type
-      if (data.examType === 'intermedio') {
+      // Add the appropriate grade type based on course settings
+      if (selectedCourse?.haIntermedio) {
         gradeData.votoLettera = data.letterGrade as LetterGrade;
       } else {
         gradeData.votoNumerico = data.numericGrade;
@@ -175,51 +177,21 @@ const GradeEntry = ({ onComplete }: GradeEntryProps) => {
             )}
           />
 
-          <div className="grid grid-cols-2 gap-4">
-            <FormField
-              control={form.control}
-              name="examType"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Tipo di esame</FormLabel>
-                  <Select 
-                    onValueChange={field.onChange} 
-                    defaultValue={field.value}
-                    disabled={selectedCourse && !selectedCourse.haIntermedio}
-                  >
-                    <FormControl>
-                      <SelectTrigger>
-                        <SelectValue placeholder="Seleziona il tipo di esame" />
-                      </SelectTrigger>
-                    </FormControl>
-                    <SelectContent>
-                      <SelectItem value="completo">Esame completo</SelectItem>
-                      {selectedCourse?.haIntermedio && (
-                        <SelectItem value="intermedio">Prova intermedia</SelectItem>
-                      )}
-                    </SelectContent>
-                  </Select>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
+          <FormField
+            control={form.control}
+            name="examDate"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Data dell'esame</FormLabel>
+                <FormControl>
+                  <Input type="date" {...field} />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
 
-            <FormField
-              control={form.control}
-              name="examDate"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Data dell'esame</FormLabel>
-                  <FormControl>
-                    <Input type="date" {...field} />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-          </div>
-
-          {filteredExams.length > 0 && watchExamType && (
+          {filteredExams.length > 0 && (
             <div className="flex items-center space-x-2">
               <Checkbox 
                 id="newExam"
@@ -229,7 +201,7 @@ const GradeEntry = ({ onComplete }: GradeEntryProps) => {
               <Label htmlFor="newExam">Crea nuovo esame</Label>
               {!newExam && (
                 <div className="text-sm text-muted-foreground ml-4">
-                  Verrà usato l'esame più recente di tipo {watchExamType === 'intermedio' ? 'intermedio' : 'completo'}
+                  Verrà usato l'esame più recente
                 </div>
               )}
             </div>
@@ -260,8 +232,8 @@ const GradeEntry = ({ onComplete }: GradeEntryProps) => {
             )}
           />
 
-          {/* Grade fields based on exam type */}
-          {watchExamType === 'intermedio' ? (
+          {/* Grade fields based on course type */}
+          {selectedCourse?.haIntermedio ? (
             <FormField
               control={form.control}
               name="letterGrade"

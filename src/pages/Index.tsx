@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from "@/components/ui/card";
@@ -206,8 +205,8 @@ const Index = () => {
                     <CardTitle>{course.nome}</CardTitle>
                     <CardDescription>
                       {course.haIntermedio 
-                        ? "Con prove intermedie (A-E)" 
-                        : "Solo esame completo"}
+                        ? "Valutazione in lettere (A-F)" 
+                        : "Valutazione numerica (18-30)"}
                     </CardDescription>
                   </CardHeader>
                   <CardContent>
@@ -251,16 +250,6 @@ const Index = () => {
                 Aggiungi Voto
               </Button>
             </div>
-          </div>
-          
-          <div className="rounded-md border p-8 text-center">
-            <h3 className="text-lg font-medium mb-2">Importazione voti da PDF</h3>
-            <p className="text-muted-foreground mb-4">
-              L'importazione dei voti da PDF sarà disponibile nelle prossime versioni.
-            </p>
-            <p className="text-sm text-muted-foreground">
-              Per ora, utilizza l'opzione "Aggiungi Voto" per inserire manualmente i voti o "Importa CSV" per caricare file CSV.
-            </p>
           </div>
         </TabsContent>
       </Tabs>

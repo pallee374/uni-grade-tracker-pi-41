@@ -4,9 +4,9 @@ import { Course } from "@/types";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Switch } from "@/components/ui/switch";
 import { toast } from "sonner";
 import { addCourse, updateCourse } from "@/utils/dataStorage";
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 
 interface CourseFormProps {
   course?: Course;
@@ -15,7 +15,7 @@ interface CourseFormProps {
 
 const CourseForm = ({ course, onComplete }: CourseFormProps) => {
   const [nome, setNome] = useState(course?.nome || "");
-  const [haIntermedio, setHaIntermedio] = useState(course?.haIntermedio || false);
+  const [votiInLettere, setVotiInLettere] = useState(course?.haIntermedio || false);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -35,12 +35,12 @@ const CourseForm = ({ course, onComplete }: CourseFormProps) => {
         updateCourse({
           id: course.id,
           nome,
-          haIntermedio
+          haIntermedio: votiInLettere // Mantenuto per compatibilità
         });
         toast.success("Corso aggiornato con successo");
       } else {
         // Create
-        addCourse({ nome, haIntermedio });
+        addCourse({ nome, haIntermedio: votiInLettere }); // Mantenuto per compatibilità
         toast.success("Corso creato con successo");
       }
       
@@ -65,15 +65,22 @@ const CourseForm = ({ course, onComplete }: CourseFormProps) => {
         />
       </div>
       
-      <div className="flex items-center space-x-2">
-        <Switch 
-          id="haIntermedio"
-          checked={haIntermedio}
-          onCheckedChange={setHaIntermedio}
-        />
-        <Label htmlFor="haIntermedio">
-          Questo corso ha prove intermedie (A-E)
-        </Label>
+      <div className="space-y-2">
+        <Label>Tipo di valutazione</Label>
+        <RadioGroup 
+          value={votiInLettere ? "lettere" : "numeri"}
+          onValueChange={(value) => setVotiInLettere(value === "lettere")}
+          className="flex flex-col space-y-1"
+        >
+          <div className="flex items-center space-x-2">
+            <RadioGroupItem value="lettere" id="lettere" />
+            <Label htmlFor="lettere">Voti in lettere (A-F)</Label>
+          </div>
+          <div className="flex items-center space-x-2">
+            <RadioGroupItem value="numeri" id="numeri" />
+            <Label htmlFor="numeri">Voti numerici (18-30 e lode)</Label>
+          </div>
+        </RadioGroup>
       </div>
       
       <div className="flex justify-end space-x-2">

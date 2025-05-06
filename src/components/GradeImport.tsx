@@ -42,8 +42,10 @@ const GradeImport = ({ onComplete }: GradeImportProps) => {
       const course = courses.find(c => c.id === courseId) || null;
       setSelectedCourse(course);
       
-      // If the course doesn't have intermediates, force complete exam type
-      if (course && !course.haIntermedio && examType === 'intermedio') {
+      // Imposta il tipo di esame basato sul tipo di valutazione del corso
+      if (course && course.haIntermedio && examType === 'completo') {
+        setExamType('intermedio');
+      } else if (course && !course.haIntermedio && examType === 'intermedio') {
         setExamType('completo');
       }
     } else {
@@ -125,15 +127,16 @@ const GradeImport = ({ onComplete }: GradeImportProps) => {
             <Select 
               value={examType} 
               onValueChange={setExamType as (value: string) => void}
-              disabled={selectedCourse && !selectedCourse.haIntermedio}
+              disabled={selectedCourse !== null}
             >
               <SelectTrigger>
                 <SelectValue placeholder="Seleziona il tipo di esame" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="completo">Esame completo</SelectItem>
-                {selectedCourse?.haIntermedio && (
-                  <SelectItem value="intermedio">Prova intermedia</SelectItem>
+                {selectedCourse?.haIntermedio ? (
+                  <SelectItem value="intermedio">Valutazione in lettere</SelectItem>
+                ) : (
+                  <SelectItem value="completo">Valutazione numerica</SelectItem>
                 )}
               </SelectContent>
             </Select>
@@ -177,9 +180,9 @@ const GradeImport = ({ onComplete }: GradeImportProps) => {
             id="csvData"
             className="w-full h-40 p-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-ring"
             placeholder={
-              examType === 'completo' 
-                ? "matricola,voto,lode\n0612710900,30,true\n0612710901,28,false" 
-                : "matricola,voto\n0612710900,A\n0612710901,B"
+              selectedCourse?.haIntermedio
+                ? "matricola,voto\n0612710900,A\n0612710901,B"
+                : "matricola,voto,lode\n0612710900,30,true\n0612710901,28,false"
             }
             value={csvData}
             onChange={(e) => setCsvData(e.target.value)}
@@ -187,16 +190,16 @@ const GradeImport = ({ onComplete }: GradeImportProps) => {
 
           <div className="text-sm text-muted-foreground">
             <p className="font-medium">Formato richiesto:</p>
-            {examType === 'completo' ? (
+            {selectedCourse?.haIntermedio ? (
               <ul className="list-disc pl-5 space-y-1">
                 <li><code>matricola</code>: La matricola dello studente (obbligatorio)</li>
-                <li><code>voto</code>: Voto numerico da 18 a 30 (obbligatorio)</li>
-                <li><code>lode</code>: true/false se il voto è con lode (opzionale)</li>
+                <li><code>voto</code>: Voto letterale da A a F (obbligatorio)</li>
               </ul>
             ) : (
               <ul className="list-disc pl-5 space-y-1">
                 <li><code>matricola</code>: La matricola dello studente (obbligatorio)</li>
-                <li><code>voto</code>: Voto letterale da A a F (obbligatorio)</li>
+                <li><code>voto</code>: Voto numerico da 18 a 30 (obbligatorio)</li>
+                <li><code>lode</code>: true/false se il voto è con lode (opzionale)</li>
               </ul>
             )}
           </div>
