@@ -1,4 +1,3 @@
-
 import { Student, Course, Exam, Grade, ExamType, LetterGrade } from "@/types";
 import { numericToLetter } from "./gradeUtils";
 
@@ -58,7 +57,7 @@ export const addStudent = (student: Omit<Student, "id">): Student => {
   
   // Check for duplicate matricola
   if (students.some(s => s.matricola === student.matricola)) {
-    throw new Error("Matricola already exists");
+    throw new Error("Matricola già esistente");
   }
   
   setStudents([...students, newStudent]);
@@ -70,12 +69,12 @@ export const updateStudent = (student: Student): Student => {
   const index = students.findIndex(s => s.id === student.id);
   
   if (index === -1) {
-    throw new Error("Student not found");
+    throw new Error("Studente non trovato");
   }
   
   // Check for duplicate matricola (excluding current student)
   if (students.some(s => s.matricola === student.matricola && s.id !== student.id)) {
-    throw new Error("Matricola already exists");
+    throw new Error("Matricola già esistente");
   }
   
   students[index] = student;
@@ -102,7 +101,7 @@ export const addCourse = (course: Omit<Course, "id">): Course => {
   
   // Check for duplicate name
   if (courses.some(c => c.nome.toLowerCase() === course.nome.toLowerCase())) {
-    throw new Error("Course name already exists");
+    throw new Error("Nome corso già esistente");
   }
   
   setCourses([...courses, newCourse]);
@@ -114,12 +113,12 @@ export const updateCourse = (course: Course): Course => {
   const index = courses.findIndex(c => c.id === course.id);
   
   if (index === -1) {
-    throw new Error("Course not found");
+    throw new Error("Corso non trovato");
   }
   
   // Check for duplicate name (excluding current course)
   if (courses.some(c => c.nome.toLowerCase() === course.nome.toLowerCase() && c.id !== course.id)) {
-    throw new Error("Course name already exists");
+    throw new Error("Nome corso già esistente");
   }
   
   courses[index] = course;
@@ -153,7 +152,7 @@ export const updateExam = (exam: Exam): Exam => {
   const index = exams.findIndex(e => e.id === exam.id);
   
   if (index === -1) {
-    throw new Error("Exam not found");
+    throw new Error("Esame non trovato");
   }
   
   exams[index] = exam;
@@ -187,7 +186,7 @@ export const updateGrade = (grade: Grade): Grade => {
   const index = grades.findIndex(g => g.id === grade.id);
   
   if (index === -1) {
-    throw new Error("Grade not found");
+    throw new Error("Voto non trovato");
   }
   
   // Validate grade data
@@ -210,29 +209,55 @@ const validateGrade = (grade: Grade): void => {
   const exam = exams.find(e => e.id === grade.examId);
   
   if (!exam) {
-    throw new Error("Related exam not found");
+    throw new Error("Esame correlato non trovato");
+  }
+  
+  // Get the course to check its evaluation type
+  const courses = getCourses();
+  const course = courses.find(c => c.id === exam.courseId);
+  
+  if (!course) {
+    throw new Error("Corso correlato non trovato");
+  }
+  
+  // Check if exam type matches course evaluation type
+  if (course.haIntermedio !== (exam.tipo === 'intermedio')) {
+    throw new Error(`Tipo di esame non compatibile con il corso. Il corso ${course.nome} ${course.haIntermedio ? "richiede" : "non accetta"} voti in lettere.`);
   }
   
   // For intermediate exams, require letter grade
   if (exam.tipo === 'intermedio') {
     if (!grade.votoLettera) {
-      throw new Error("Letter grade is required for intermediate exams");
+      throw new Error("Il voto in lettere è richiesto per gli esami intermedi");
     }
-    if (grade.votoNumerico !== undefined || grade.conLode !== undefined) {
-      throw new Error("Numeric grade and lode are not applicable for intermediate exams");
+    
+    // Clear any numeric grades
+    delete grade.votoNumerico;
+    delete grade.conLode;
+    
+    // Validate the letter grade
+    const validLetterGrades: LetterGrade[] = ['A', 'B', 'C', 'D', 'E', 'F'];
+    if (!validLetterGrades.includes(grade.votoLettera)) {
+      throw new Error(`Voto in lettere non valido: ${grade.votoLettera}. Deve essere uno tra A, B, C, D, E, F`);
     }
   }
   
   // For complete exams, require numeric grade
   if (exam.tipo === 'completo') {
     if (grade.votoNumerico === undefined) {
-      throw new Error("Numeric grade is required for complete exams");
+      throw new Error("Il voto numerico è richiesto per gli esami completi");
     }
-    if (grade.votoLettera !== undefined) {
-      throw new Error("Letter grade is not applicable for complete exams");
+    
+    // Clear any letter grades
+    delete grade.votoLettera;
+    
+    if (grade.votoNumerico < 18 || grade.votoNumerico > 30) {
+      throw new Error("Il voto numerico deve essere compreso tra 18 e 30");
     }
-    if (grade.votoNumerico !== undefined && (grade.votoNumerico < 18 || grade.votoNumerico > 30)) {
-      throw new Error("Numeric grade must be between 18 and 30");
+    
+    // Lode is only allowed with 30
+    if (grade.conLode && grade.votoNumerico !== 30) {
+      throw new Error("La lode può essere assegnata solo con il voto 30");
     }
   }
   
@@ -240,7 +265,18 @@ const validateGrade = (grade: Grade): void => {
   const students = getStudents();
   const student = students.find(s => s.matricola === grade.matricola);
   if (!student) {
-    throw new Error("Student not found");
+    throw new Error(`Studente con matricola ${grade.matricola} non trovato`);
+  }
+  
+  // Check for duplicate grades for the same student and exam
+  const existingGrade = getGrades().find(g => 
+    g.matricola === grade.matricola && 
+    g.examId === grade.examId &&
+    g.id !== grade.id
+  );
+  
+  if (existingGrade) {
+    throw new Error(`Esiste già un voto per lo studente ${student.cognome} ${student.nome} in questo esame`);
   }
 };
 
@@ -340,6 +376,20 @@ export const importGradesFromCSV = (options: GradeImportOptions): ImportResult =
     return { imported: 0, errors: 0 };
   }
   
+  // Get course for type information
+  const courses = getCourses();
+  const course = courses.find(c => c.id === courseId);
+  
+  if (!course) {
+    throw new Error("Corso non trovato");
+  }
+  
+  // Validate that exam type matches course type
+  if ((course.haIntermedio && examType !== 'intermedio') || 
+      (!course.haIntermedio && examType !== 'completo')) {
+    throw new Error(`Tipo di esame non compatibile con il corso. Il corso ${course.nome} ${course.haIntermedio ? "richiede" : "non accetta"} voti in lettere.`);
+  }
+  
   // Skip header row if indicated
   const startIndex = hasHeaderRow ? 1 : 0;
   
@@ -377,19 +427,13 @@ export const importGradesFromCSV = (options: GradeImportOptions): ImportResult =
   let errors = 0;
   const students = getStudents();
   const matricoleSet = new Set(students.map(s => s.matricola));
-  
-  // Get course for type information
-  const courses = getCourses();
-  const course = courses.find(c => c.id === courseId);
-  
-  if (!course) {
-    throw new Error("Course not found");
-  }
+  const existingGrades = getGrades().filter(g => g.examId === exam.id);
+  const processedMatricoleSet = new Set<string>();
   
   for (let i = startIndex; i < rows.length; i++) {
-    const columns = rows[i].split(',').map(col => col.trim());
-    
     try {
+      const columns = rows[i].split(',').map(col => col.trim());
+      
       if (columns.length < 2) {
         errors++;
         continue;
@@ -403,28 +447,46 @@ export const importGradesFromCSV = (options: GradeImportOptions): ImportResult =
         continue;
       }
       
+      // Avoid duplicate imports for the same student
+      if (processedMatricoleSet.has(matricola)) {
+        errors++;
+        continue;
+      }
+      
+      // Check if student already has a grade for this exam
+      if (existingGrades.some(g => g.matricola === matricola)) {
+        errors++;
+        continue;
+      }
+      
+      processedMatricoleSet.add(matricola);
+      
       if (course.haIntermedio) {
         // For letter grade courses
         let letterGrade: LetterGrade;
         
-        // Check if the input is a letter or a number
-        if (['A', 'B', 'C', 'D', 'E', 'F'].includes(columns[1].toUpperCase())) {
+        // Check if the input is a valid letter grade
+        const validLetterGrades: LetterGrade[] = ['A', 'B', 'C', 'D', 'E', 'F'];
+        if (validLetterGrades.includes(columns[1].toUpperCase() as LetterGrade)) {
           letterGrade = columns[1].toUpperCase() as LetterGrade;
         } else {
-          // If it's a number, convert it to a letter grade
-          const numericGrade = parseFloat(columns[1]);
-          if (isNaN(numericGrade) || numericGrade < 0) {
+          // Try to convert a numeric input to letter grade if possible
+          const numericValue = parseFloat(columns[1]);
+          if (!isNaN(numericValue)) {
+            letterGrade = numericToLetter(numericValue);
+          } else {
             errors++;
             continue;
           }
-          letterGrade = numericToLetter(numericGrade);
         }
         
+        // Add grade
         addGrade({
           matricola,
           examId: exam.id,
           votoLettera: letterGrade
         });
+        imported++;
       } else {
         // For numeric grade courses
         const votoNumerico = parseInt(columns[1]);
@@ -444,15 +506,15 @@ export const importGradesFromCSV = (options: GradeImportOptions): ImportResult =
           continue;
         }
         
+        // Add grade
         addGrade({
           matricola,
           examId: exam.id,
           votoNumerico,
           conLode
         });
+        imported++;
       }
-      
-      imported++;
     } catch (error) {
       errors++;
     }

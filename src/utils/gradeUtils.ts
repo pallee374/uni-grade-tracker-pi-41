@@ -1,4 +1,3 @@
-
 import { Course, Exam, Grade, GradeStats, LetterGrade } from "@/types";
 import { getCourses, getExams, getGrades, getStudents } from "./dataStorage";
 

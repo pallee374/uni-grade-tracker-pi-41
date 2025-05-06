@@ -14,7 +14,7 @@ import {
 } from "@/components/ui/select";
 import { Input } from "@/components/ui/input";
 import { Checkbox } from "@/components/ui/checkbox";
-import { Upload, FileText } from "lucide-react";
+import { Upload, FileText, AlertCircle } from "lucide-react";
 
 interface GradeImportProps {
   onComplete: () => void;
@@ -24,7 +24,6 @@ const GradeImport = ({ onComplete }: GradeImportProps) => {
   const [courses, setCourses] = useState<Course[]>([]);
   const [csvData, setCsvData] = useState("");
   const [courseId, setCourseId] = useState("");
-  const [examType, setExamType] = useState<ExamType>("completo");
   const [examDate, setExamDate] = useState(new Date().toISOString().split("T")[0]);
   const [isNewExam, setIsNewExam] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -41,12 +40,6 @@ const GradeImport = ({ onComplete }: GradeImportProps) => {
     if (courseId) {
       const course = courses.find(c => c.id === courseId) || null;
       setSelectedCourse(course);
-      
-      // Set exam type based on course evaluation type
-      if (course) {
-        // If course is found, set the exam type accordingly
-        setExamType(course.haIntermedio ? 'intermedio' : 'completo');
-      }
     } else {
       setSelectedCourse(null);
     }
@@ -60,24 +53,36 @@ const GradeImport = ({ onComplete }: GradeImportProps) => {
       // Validation
       if (!courseId) {
         toast.error("Seleziona un corso");
+        setIsSubmitting(false);
         return;
       }
       
       if (!examDate) {
         toast.error("Seleziona una data per l'esame");
+        setIsSubmitting(false);
         return;
       }
       
       if (!csvData.trim()) {
         toast.error("Inserisci i dati CSV");
+        setIsSubmitting(false);
         return;
       }
+
+      if (!selectedCourse) {
+        toast.error("Errore nella selezione del corso");
+        setIsSubmitting(false);
+        return;
+      }
+      
+      // Import grades with the correct exam type based on course setting
+      const examType = selectedCourse.haIntermedio ? 'intermedio' : 'completo';
       
       // Import grades
       const result = importGradesFromCSV({
         csvData,
         courseId,
-        examType: selectedCourse?.haIntermedio ? 'intermedio' : 'completo',
+        examType,
         examDate,
         isNewExam,
         hasHeaderRow
@@ -170,17 +175,35 @@ const GradeImport = ({ onComplete }: GradeImportProps) => {
           <div className="text-sm text-muted-foreground">
             <p className="font-medium">Formato richiesto:</p>
             {selectedCourse?.haIntermedio ? (
-              <ul className="list-disc pl-5 space-y-1">
-                <li><code>matricola</code>: La matricola dello studente (obbligatorio)</li>
-                <li><code>voto</code>: Voto letterale da A a F (obbligatorio)</li>
-                <li>Nota: A (30), B (28-29), C (25-27), D (22-24), E (18-21), F (insufficiente)</li>
-              </ul>
+              <div>
+                <ul className="list-disc pl-5 space-y-1">
+                  <li><code>matricola</code>: La matricola dello studente (obbligatorio)</li>
+                  <li><code>voto</code>: Voto letterale da A a F (obbligatorio)</li>
+                </ul>
+                <div className="mt-2 p-2 bg-muted rounded-md">
+                  <p className="font-medium">Conversione voti:</p>
+                  <ul className="grid grid-cols-2 gap-x-4 gap-y-1">
+                    <li>A = 30</li>
+                    <li>B = 28-29</li>
+                    <li>C = 25-27</li>
+                    <li>D = 22-24</li>
+                    <li>E = 18-21</li>
+                    <li>F = insufficiente</li>
+                  </ul>
+                </div>
+              </div>
             ) : (
-              <ul className="list-disc pl-5 space-y-1">
-                <li><code>matricola</code>: La matricola dello studente (obbligatorio)</li>
-                <li><code>voto</code>: Voto numerico da 18 a 30 (obbligatorio)</li>
-                <li><code>lode</code>: true/false se il voto è con lode (opzionale)</li>
-              </ul>
+              <div>
+                <ul className="list-disc pl-5 space-y-1">
+                  <li><code>matricola</code>: La matricola dello studente (obbligatorio)</li>
+                  <li><code>voto</code>: Voto numerico da 18 a 30 (obbligatorio)</li>
+                  <li><code>lode</code>: true/false se il voto è con lode (opzionale)</li>
+                </ul>
+                <div className="mt-2 p-2 bg-muted rounded-md flex items-center gap-2 text-amber-500">
+                  <AlertCircle size={16} />
+                  <p>Per i voti numerici, inserire valori compresi tra 18 e 30</p>
+                </div>
+              </div>
             )}
           </div>
         </div>
