@@ -1,5 +1,4 @@
-
-import { Student, Course, Exam, Grade } from "@/types";
+import { Student, Course, Exam, Grade, ExamType, LetterGrade } from "@/types";
 
 // Local storage keys
 const STUDENTS_KEY = "sgvu_students";
