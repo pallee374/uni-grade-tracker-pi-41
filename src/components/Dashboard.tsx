@@ -1,9 +1,8 @@
 
 import { useState, useEffect } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from "recharts";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from "recharts";
 import { getDashboardAnalytics, getExamStats } from "@/utils/gradeUtils";
 
 const Dashboard = () => {
@@ -39,16 +38,6 @@ const Dashboard = () => {
     setExamStats(stats);
   };
 
-  const prepareChartData = () => {
-    if (!analytics?.courseStats) return [];
-    
-    return analytics.courseStats.map((course: any) => ({
-      name: course.name,
-      average: course.stats.average,
-      passing: course.stats.passingPercentage,
-    }));
-  };
-
   const prepareDistributionData = () => {
     // Use selected exam stats if available, otherwise use overall stats
     const distribution = examStats?.distribution || analytics?.overallStats?.distribution;
@@ -72,7 +61,7 @@ const Dashboard = () => {
 
   return (
     <div className="space-y-4">
-      <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-4">
+      <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Studenti</CardTitle>
@@ -81,17 +70,6 @@ const Dashboard = () => {
             <div className="text-2xl font-bold">{analytics?.counts.students || 0}</div>
             <p className="text-xs text-muted-foreground">
               Totale studenti nel sistema
-            </p>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Corsi</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{analytics?.counts.courses || 0}</div>
-            <p className="text-xs text-muted-foreground">
-              Corsi attivi nel sistema
             </p>
           </CardContent>
         </Card>
@@ -136,7 +114,7 @@ const Dashboard = () => {
             <SelectContent>
               {analytics?.recentExams.map((exam: any) => (
                 <SelectItem key={exam.id} value={exam.id}>
-                  {exam.courseName} - {exam.type === 'intermedio' ? 'Intermedio' : 'Completo'} ({exam.date})
+                  {exam.type === 'intermedio' ? 'Voti in lettere' : 'Voti numerici'} ({exam.date})
                 </SelectItem>
               ))}
             </SelectContent>
@@ -144,48 +122,25 @@ const Dashboard = () => {
         </CardContent>
       </Card>
       
-      <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-        <Card className="col-span-1">
-          <CardHeader>
-            <CardTitle>Distribuzione dei voti</CardTitle>
-            <CardDescription>
-              {selectedExamId ? "Per l'esame selezionato" : "Tutti gli esami"}
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="h-80">
-            <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={prepareDistributionData()}>
-                <CartesianGrid strokeDasharray="3 3" />
-                <XAxis dataKey="grade" />
-                <YAxis />
-                <Tooltip />
-                <Bar dataKey="count" name="Numero di voti" fill="#1a75ff" />
-              </BarChart>
-            </ResponsiveContainer>
-          </CardContent>
-        </Card>
-        
-        <Card>
-          <CardHeader>
-            <CardTitle>Statistiche per corso</CardTitle>
-            <CardDescription>
-              Media e percentuale di approvazione
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="h-80">
-            <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={prepareChartData()}>
-                <CartesianGrid strokeDasharray="3 3" />
-                <XAxis dataKey="name" />
-                <YAxis />
-                <Tooltip />
-                <Bar dataKey="average" name="Media" fill="#1a75ff" />
-                <Bar dataKey="passing" name="% Approvazione" fill="#4d94ff" />
-              </BarChart>
-            </ResponsiveContainer>
-          </CardContent>
-        </Card>
-      </div>
+      <Card className="col-span-1">
+        <CardHeader>
+          <CardTitle>Distribuzione dei voti</CardTitle>
+          <CardDescription>
+            {selectedExamId ? "Per l'esame selezionato" : "Tutti gli esami"}
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="h-80">
+          <ResponsiveContainer width="100%" height="100%">
+            <BarChart data={prepareDistributionData()}>
+              <CartesianGrid strokeDasharray="3 3" />
+              <XAxis dataKey="grade" />
+              <YAxis />
+              <Tooltip />
+              <Bar dataKey="count" name="Numero di voti" fill="#1a75ff" />
+            </BarChart>
+          </ResponsiveContainer>
+        </CardContent>
+      </Card>
 
       <Card>
         <CardHeader>
@@ -201,10 +156,10 @@ const Dashboard = () => {
                 <div key={exam.id} className="flex items-center justify-between">
                   <div className="space-y-1">
                     <p className="text-sm font-medium leading-none">
-                      {exam.courseName}
+                      {exam.type === 'intermedio' ? 'Voti in lettere' : 'Voti numerici'}
                     </p>
                     <p className="text-sm text-muted-foreground">
-                      {exam.type === 'intermedio' ? 'Prova intermedia' : 'Esame completo'} - {exam.date}
+                      Data: {exam.date}
                     </p>
                   </div>
                   <div className="text-right">

@@ -1,7 +1,6 @@
 
 import { useState, useEffect } from "react";
 import { 
-  Course, 
   Exam, 
   ExamType, 
   Grade, 
@@ -9,7 +8,6 @@ import {
   Student 
 } from "@/types";
 import { 
-  getCourses, 
   getExams, 
   getStudents,
   addExam,
@@ -44,62 +42,43 @@ interface GradeEntryProps {
 }
 
 interface FormData {
-  courseId: string;
-  examType: ExamType;
+  examId: string;
   examDate: string;
   studentId: string;
   letterGrade?: string;
   numericGrade?: number;
   conLode?: boolean;
+  useLetterGrades: boolean;
 }
 
 const GradeEntry = ({ onComplete }: GradeEntryProps) => {
-  const [courses, setCourses] = useState<Course[]>([]);
   const [students, setStudents] = useState<Student[]>([]);
   const [exams, setExams] = useState<Exam[]>([]);
-  const [selectedCourse, setSelectedCourse] = useState<Course | null>(null);
   const [newExam, setNewExam] = useState(true);
+  const [useLetterGrades, setUseLetterGrades] = useState(false);
   
   const form = useForm<FormData>({
     defaultValues: {
       examDate: format(new Date(), 'yyyy-MM-dd'),
-      examType: 'completo',
+      useLetterGrades: false,
       conLode: false
     }
   });
   
   const { watch, setValue } = form;
   
-  const watchCourseId = watch('courseId');
-  const watchExamType = watch('examType');
+  const watchExamId = watch('examId');
+  const watchUseLetterGrades = watch('useLetterGrades');
   
   useEffect(() => {
-    // Load courses and students
-    setCourses(getCourses());
+    // Load students and exams
     setStudents(getStudents());
     setExams(getExams());
   }, []);
-  
-  // Update selected course when courseId changes
+
   useEffect(() => {
-    if (watchCourseId) {
-      const course = courses.find(c => c.id === watchCourseId) || null;
-      setSelectedCourse(course);
-      
-      // Imposta il tipo di esame basato sul tipo di valutazione del corso
-      if (course) {
-        const newExamType = course.haIntermedio ? 'intermedio' : 'completo';
-        setValue('examType', newExamType);
-      }
-    } else {
-      setSelectedCourse(null);
-    }
-  }, [watchCourseId, courses, setValue]);
-  
-  // Filter exams based on selected course
-  const filteredExams = watchCourseId 
-    ? exams.filter(e => e.courseId === watchCourseId)
-    : [];
+    setUseLetterGrades(watchUseLetterGrades || false);
+  }, [watchUseLetterGrades]);
   
   const onSubmit = async (data: FormData) => {
     try {
@@ -110,16 +89,12 @@ const GradeEntry = ({ onComplete }: GradeEntryProps) => {
         return;
       }
       
-      let examId = !newExam && filteredExams.length > 0
-        ? filteredExams[0].id
-        : '';
+      let examId = data.examId;
       
       // Create new exam if needed
       if (newExam || !examId) {
-        const examType = selectedCourse?.haIntermedio ? 'intermedio' : 'completo';
         const newExamData = await addExam({
-          courseId: data.courseId,
-          tipo: examType,
+          tipo: data.useLetterGrades ? 'intermedio' : 'completo',
           data: data.examDate
         });
         examId = newExamData.id;
@@ -131,8 +106,8 @@ const GradeEntry = ({ onComplete }: GradeEntryProps) => {
         examId
       };
       
-      // Add the appropriate grade type based on course settings
-      if (selectedCourse?.haIntermedio) {
+      // Add the appropriate grade type based on settings
+      if (data.useLetterGrades) {
         gradeData.votoLettera = data.letterGrade as LetterGrade;
       } else {
         gradeData.votoNumerico = data.numericGrade;
@@ -154,24 +129,16 @@ const GradeEntry = ({ onComplete }: GradeEntryProps) => {
         <div className="space-y-4">
           <FormField
             control={form.control}
-            name="courseId"
+            name="useLetterGrades"
             render={({ field }) => (
-              <FormItem>
-                <FormLabel>Corso</FormLabel>
-                <Select onValueChange={field.onChange} defaultValue={field.value}>
-                  <FormControl>
-                    <SelectTrigger>
-                      <SelectValue placeholder="Seleziona un corso" />
-                    </SelectTrigger>
-                  </FormControl>
-                  <SelectContent>
-                    {courses.map((course) => (
-                      <SelectItem key={course.id} value={course.id}>
-                        {course.nome}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+              <FormItem className="flex flex-row items-center space-x-3 space-y-0">
+                <FormControl>
+                  <Checkbox 
+                    checked={field.value} 
+                    onCheckedChange={field.onChange}
+                  />
+                </FormControl>
+                <FormLabel>Usa voti in lettere</FormLabel>
                 <FormMessage />
               </FormItem>
             )}
@@ -191,7 +158,36 @@ const GradeEntry = ({ onComplete }: GradeEntryProps) => {
             )}
           />
 
-          {filteredExams.length > 0 && (
+          {!newExam && exams.length > 0 && (
+            <FormField
+              control={form.control}
+              name="examId"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Esame esistente</FormLabel>
+                  <Select onValueChange={field.onChange} defaultValue={field.value}>
+                    <FormControl>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Seleziona un esame" />
+                      </SelectTrigger>
+                    </FormControl>
+                    <SelectContent>
+                      {exams
+                        .filter(exam => (exam.tipo === 'intermedio') === useLetterGrades)
+                        .map((exam) => (
+                          <SelectItem key={exam.id} value={exam.id}>
+                            {exam.data} - {exam.tipo === 'intermedio' ? 'Voti in lettere' : 'Voti numerici'}
+                          </SelectItem>
+                        ))}
+                    </SelectContent>
+                  </Select>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+          )}
+
+          {exams.length > 0 && (
             <div className="flex items-center space-x-2">
               <Checkbox 
                 id="newExam"
@@ -199,11 +195,6 @@ const GradeEntry = ({ onComplete }: GradeEntryProps) => {
                 onCheckedChange={(checked) => setNewExam(!!checked)}
               />
               <Label htmlFor="newExam">Crea nuovo esame</Label>
-              {!newExam && (
-                <div className="text-sm text-muted-foreground ml-4">
-                  Verrà usato l'esame più recente
-                </div>
-              )}
             </div>
           )}
 
@@ -232,8 +223,8 @@ const GradeEntry = ({ onComplete }: GradeEntryProps) => {
             )}
           />
 
-          {/* Grade fields based on course type */}
-          {selectedCourse?.haIntermedio ? (
+          {/* Grade fields based on type */}
+          {useLetterGrades ? (
             <FormField
               control={form.control}
               name="letterGrade"

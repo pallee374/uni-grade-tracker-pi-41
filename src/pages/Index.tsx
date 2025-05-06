@@ -27,13 +27,11 @@ const Index = () => {
   const [activeTab, setActiveTab] = useState("dashboard");
   const [refreshTrigger, setRefreshTrigger] = useState(0);
   const [showAddStudent, setShowAddStudent] = useState(false);
-  const [showAddExam, setShowAddExam] = useState(false);
   const [showAddGrade, setShowAddGrade] = useState(false);
   const [showStudentDetail, setShowStudentDetail] = useState<string | null>(null);
   const [showImportDialog, setShowImportDialog] = useState(false);
   const [showImportGradeDialog, setShowImportGradeDialog] = useState(false);
   const [editingStudent, setEditingStudent] = useState<Student | null>(null);
-  const [editingExam, setEditingExam] = useState<Exam | null>(null);
   
   const [newStudent, setNewStudent] = useState({
     matricola: "",
@@ -191,16 +189,11 @@ const Index = () => {
               exams.map((exam) => (
                 <Card key={exam.id}>
                   <CardHeader>
-                    <CardTitle>{exam.tipo === 'intermedio' ? 'Intermedio' : 'Completo'}</CardTitle>
+                    <CardTitle>{exam.tipo === 'intermedio' ? 'Voti in lettere (A-F)' : 'Voti numerici (18-30)'}</CardTitle>
                     <CardDescription>
                       Data: {exam.data}
                     </CardDescription>
                   </CardHeader>
-                  <CardContent>
-                    <p className="text-sm text-muted-foreground mb-4">
-                      Corso: {exams.find(c => c.id === exam.courseId)?.courseId || 'N/A'}
-                    </p>
-                  </CardContent>
                   <CardFooter>
                     <Button 
                       variant="destructive"
@@ -386,7 +379,6 @@ const Index = () => {
                 <table className="w-full">
                   <thead>
                     <tr className="border-b">
-                      <th className="px-4 py-2 text-left">Corso</th>
                       <th className="px-4 py-2 text-left">Tipo</th>
                       <th className="px-4 py-2 text-left">Data</th>
                       <th className="px-4 py-2 text-left">Voto</th>
@@ -395,9 +387,8 @@ const Index = () => {
                   <tbody>
                     {studentDetail.grades.map((grade: any) => (
                       <tr key={grade.id} className="border-b hover:bg-muted/50">
-                        <td className="px-4 py-2">{grade.course.nome}</td>
                         <td className="px-4 py-2">
-                          {grade.exam.tipo === 'intermedio' ? 'Intermedio' : 'Completo'}
+                          {grade.exam.tipo === 'intermedio' ? 'Voti in lettere' : 'Voti numerici'}
                         </td>
                         <td className="px-4 py-2">{grade.exam.data}</td>
                         <td className="px-4 py-2 font-medium">

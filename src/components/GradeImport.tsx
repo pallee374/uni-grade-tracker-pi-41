@@ -1,10 +1,13 @@
 
 import { useState, useEffect } from "react";
-import { Course, Student, ExamType } from "@/types";
+import { Student, ExamType } from "@/types";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
-import { getCourses, getStudents, importGradesFromCSV } from "@/utils/dataStorage";
+import { getStudents, importGradesFromCSV } from "@/utils/dataStorage";
+import { Input } from "@/components/ui/input";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Upload, FileText, AlertCircle } from "lucide-react";
 import {
   Select,
   SelectContent,
@@ -12,51 +15,24 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Input } from "@/components/ui/input";
-import { Checkbox } from "@/components/ui/checkbox";
-import { Upload, FileText, AlertCircle } from "lucide-react";
 
 interface GradeImportProps {
   onComplete: () => void;
 }
 
 const GradeImport = ({ onComplete }: GradeImportProps) => {
-  const [courses, setCourses] = useState<Course[]>([]);
   const [csvData, setCsvData] = useState("");
-  const [courseId, setCourseId] = useState("");
   const [examDate, setExamDate] = useState(new Date().toISOString().split("T")[0]);
   const [isNewExam, setIsNewExam] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [selectedCourse, setSelectedCourse] = useState<Course | null>(null);
   const [hasHeaderRow, setHasHeaderRow] = useState(true);
-
-  useEffect(() => {
-    // Load courses
-    setCourses(getCourses());
-  }, []);
-  
-  // Update selected course when courseId changes
-  useEffect(() => {
-    if (courseId) {
-      const course = courses.find(c => c.id === courseId) || null;
-      setSelectedCourse(course);
-    } else {
-      setSelectedCourse(null);
-    }
-  }, [courseId, courses]);
+  const [examType, setExamType] = useState<ExamType>("completo");
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsSubmitting(true);
     
     try {
-      // Validation
-      if (!courseId) {
-        toast.error("Seleziona un corso");
-        setIsSubmitting(false);
-        return;
-      }
-      
       if (!examDate) {
         toast.error("Seleziona una data per l'esame");
         setIsSubmitting(false);
@@ -69,19 +45,9 @@ const GradeImport = ({ onComplete }: GradeImportProps) => {
         return;
       }
 
-      if (!selectedCourse) {
-        toast.error("Errore nella selezione del corso");
-        setIsSubmitting(false);
-        return;
-      }
-      
-      // Import grades with the correct exam type based on course setting
-      const examType = selectedCourse.haIntermedio ? 'intermedio' : 'completo';
-      
       // Import grades
       const result = importGradesFromCSV({
         csvData,
-        courseId,
         examType,
         examDate,
         isNewExam,
@@ -111,17 +77,14 @@ const GradeImport = ({ onComplete }: GradeImportProps) => {
       <div className="space-y-4">
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div>
-            <Label htmlFor="courseId">Corso</Label>
-            <Select value={courseId} onValueChange={setCourseId}>
+            <Label htmlFor="examType">Tipo di voto</Label>
+            <Select value={examType} onValueChange={(value) => setExamType(value as ExamType)}>
               <SelectTrigger>
-                <SelectValue placeholder="Seleziona un corso" />
+                <SelectValue placeholder="Seleziona il tipo di voto" />
               </SelectTrigger>
               <SelectContent>
-                {courses.map((course) => (
-                  <SelectItem key={course.id} value={course.id}>
-                    {course.nome}
-                  </SelectItem>
-                ))}
+                <SelectItem value="intermedio">Voti in lettere (A-F)</SelectItem>
+                <SelectItem value="completo">Voti numerici (18-30)</SelectItem>
               </SelectContent>
             </Select>
           </div>
@@ -164,7 +127,7 @@ const GradeImport = ({ onComplete }: GradeImportProps) => {
             id="csvData"
             className="w-full h-40 p-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-ring"
             placeholder={
-              selectedCourse?.haIntermedio
+              examType === "intermedio"
                 ? "matricola,voto\n0612710900,A\n0612710901,B"
                 : "matricola,voto,lode\n0612710900,30,true\n0612710901,28,false"
             }
@@ -174,7 +137,7 @@ const GradeImport = ({ onComplete }: GradeImportProps) => {
 
           <div className="text-sm text-muted-foreground">
             <p className="font-medium">Formato richiesto:</p>
-            {selectedCourse?.haIntermedio ? (
+            {examType === "intermedio" ? (
               <div>
                 <ul className="list-disc pl-5 space-y-1">
                   <li><code>matricola</code>: La matricola dello studente (obbligatorio)</li>

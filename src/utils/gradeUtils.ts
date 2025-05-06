@@ -1,6 +1,6 @@
 
-import { Course, Exam, Grade, GradeStats, LetterGrade } from "@/types";
-import { getCourses, getExams, getGrades, getStudents } from "./dataStorage";
+import { Exam, Grade, GradeStats, LetterGrade } from "@/types";
+import { getExams, getGrades, getStudents } from "./dataStorage";
 
 // Convert letter grade to numeric equivalent for calculations
 export const letterToNumeric = (letter: LetterGrade): number => {
@@ -99,14 +99,6 @@ export const calculateStats = (grades: Grade[]): GradeStats => {
   };
 };
 
-// Calculate statistics for a course
-export const getCourseStats = (courseId: string): GradeStats => {
-  const exams = getExams().filter(e => e.courseId === courseId);
-  const examIds = exams.map(e => e.id);
-  const courseGrades = getGrades().filter(g => examIds.includes(g.examId));
-  return calculateStats(courseGrades);
-};
-
 // Calculate statistics for an exam
 export const getExamStats = (examId: string): GradeStats => {
   const examGrades = getGrades().filter(g => g.examId === examId);
@@ -117,17 +109,15 @@ export const getExamStats = (examId: string): GradeStats => {
 export const getStudentGrades = (matricola: string) => {
   const grades = getGrades().filter(g => g.matricola === matricola);
   const exams = getExams();
-  const courses = getCourses();
   
   return grades.map(grade => {
     const exam = exams.find(e => e.id === grade.examId);
-    const course = exam ? courses.find(c => c.id === exam.courseId) : undefined;
     
     return {
       ...grade,
       examType: exam?.tipo || '',
       examDate: exam?.data || '',
-      courseName: course?.nome || ''
+      exam: exam || {}
     };
   });
 };
@@ -156,35 +146,22 @@ export const getStudentAverage = (matricola: string): number => {
 // Get analytics data for dashboard
 export const getDashboardAnalytics = () => {
   const students = getStudents();
-  const courses = getCourses();
   const exams = getExams();
   const grades = getGrades();
   
   // Overall statistics
   const overallStats = calculateStats(grades);
   
-  // Course statistics
-  const courseStats = courses.map(course => {
-    const stats = getCourseStats(course.id);
-    return {
-      id: course.id,
-      name: course.nome,
-      stats
-    };
-  });
-  
   // Recent exams
   const recentExams = [...exams]
     .sort((a, b) => new Date(b.data).getTime() - new Date(a.data).getTime())
     .slice(0, 10) // Show more exams for selection
     .map(exam => {
-      const course = courses.find(c => c.id === exam.courseId);
       const stats = getExamStats(exam.id);
       return {
         id: exam.id,
         date: exam.data,
         type: exam.tipo,
-        courseName: course?.nome || '',
         stats
       };
     });
@@ -192,12 +169,10 @@ export const getDashboardAnalytics = () => {
   return {
     counts: {
       students: students.length,
-      courses: courses.length,
       exams: exams.length,
       grades: grades.length
     },
     overallStats,
-    courseStats,
     recentExams
   };
 };
