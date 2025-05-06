@@ -1,7 +1,7 @@
 
 import { useState, useEffect } from "react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -13,14 +13,16 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { toast } from "sonner";
+import { Trash2 } from "lucide-react";
 
 import Dashboard from "@/components/Dashboard";
 import StudentTable from "@/components/StudentTable";
 import CourseForm from "@/components/CourseForm";
 import GradeEntry from "@/components/GradeEntry";
 import { Course, Student } from "@/types";
-import { addStudent, getCourses, getStudentWithGrades, importStudentsFromCSV, initializeSampleData, updateStudent } from "@/utils/dataStorage";
+import { addStudent, getCourses, getStudentWithGrades, importStudentsFromCSV, initializeSampleData, updateStudent, deleteCourse, importGradesFromCSV } from "@/utils/dataStorage";
 import { formatGrade } from "@/utils/gradeUtils";
+import GradeImport from "@/components/GradeImport";
 
 const Index = () => {
   const [activeTab, setActiveTab] = useState("dashboard");
@@ -30,6 +32,7 @@ const Index = () => {
   const [showAddGrade, setShowAddGrade] = useState(false);
   const [showStudentDetail, setShowStudentDetail] = useState<string | null>(null);
   const [showImportDialog, setShowImportDialog] = useState(false);
+  const [showImportGradeDialog, setShowImportGradeDialog] = useState(false);
   const [editingStudent, setEditingStudent] = useState<Student | null>(null);
   const [editingCourse, setEditingCourse] = useState<Course | null>(null);
   
@@ -132,6 +135,16 @@ const Index = () => {
     setShowAddCourse(true);
   };
 
+  const handleDeleteCourse = (courseId: string) => {
+    try {
+      deleteCourse(courseId);
+      toast.success("Corso eliminato con successo");
+      refreshData();
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Errore durante l'eliminazione");
+    }
+  };
+
   return (
     <div className="container mx-auto p-4 space-y-6">
       <header className="flex justify-between items-center py-6">
@@ -207,6 +220,17 @@ const Index = () => {
                       Modifica
                     </Button>
                   </CardContent>
+                  <CardFooter>
+                    <Button 
+                      variant="destructive"
+                      size="sm"
+                      className="w-full"
+                      onClick={() => handleDeleteCourse(course.id)}
+                    >
+                      <Trash2 className="mr-1" size={16} />
+                      Elimina
+                    </Button>
+                  </CardFooter>
                 </Card>
               ))
             )}
@@ -216,9 +240,17 @@ const Index = () => {
         <TabsContent value="grades" className="space-y-4">
           <div className="flex justify-between items-center">
             <h2 className="text-2xl font-bold">Gestione Voti</h2>
-            <Button onClick={() => setShowAddGrade(true)}>
-              Aggiungi Voto
-            </Button>
+            <div className="space-x-2">
+              <Button 
+                variant="outline"
+                onClick={() => setShowImportGradeDialog(true)}
+              >
+                Importa CSV
+              </Button>
+              <Button onClick={() => setShowAddGrade(true)}>
+                Aggiungi Voto
+              </Button>
+            </div>
           </div>
           
           <div className="rounded-md border p-8 text-center">
@@ -227,7 +259,7 @@ const Index = () => {
               L'importazione dei voti da PDF sarà disponibile nelle prossime versioni.
             </p>
             <p className="text-sm text-muted-foreground">
-              Per ora, utilizza l'opzione "Aggiungi Voto" per inserire manualmente i voti.
+              Per ora, utilizza l'opzione "Aggiungi Voto" per inserire manualmente i voti o "Importa CSV" per caricare file CSV.
             </p>
           </div>
         </TabsContent>
@@ -363,6 +395,25 @@ const Index = () => {
           <GradeEntry
             onComplete={() => {
               setShowAddGrade(false);
+              refreshData();
+            }}
+          />
+        </DialogContent>
+      </Dialog>
+
+      {/* Import Grades Dialog */}
+      <Dialog open={showImportGradeDialog} onOpenChange={setShowImportGradeDialog}>
+        <DialogContent className="max-w-2xl">
+          <DialogHeader>
+            <DialogTitle>Importa Voti da CSV</DialogTitle>
+            <DialogDescription>
+              Importa voti da un file CSV
+            </DialogDescription>
+          </DialogHeader>
+          
+          <GradeImport
+            onComplete={() => {
+              setShowImportGradeDialog(false);
               refreshData();
             }}
           />

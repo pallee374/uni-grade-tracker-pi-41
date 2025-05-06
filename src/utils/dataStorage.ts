@@ -1,3 +1,4 @@
+
 import { Student, Course, Exam, Grade, ExamType, LetterGrade } from "@/types";
 
 // Local storage keys
@@ -313,6 +314,134 @@ export const importStudentsFromCSV = (csv: string): Student[] => {
   }
   
   return importedStudents;
+};
+
+// Import grades from CSV
+interface GradeImportOptions {
+  csvData: string;
+  courseId: string;
+  examType: ExamType;
+  examDate: string;
+  isNewExam: boolean;
+  hasHeaderRow: boolean;
+}
+
+interface ImportResult {
+  imported: number;
+  errors: number;
+}
+
+export const importGradesFromCSV = (options: GradeImportOptions): ImportResult => {
+  const { csvData, courseId, examType, examDate, isNewExam, hasHeaderRow } = options;
+  const rows = csvData.split('\n').filter(row => row.trim());
+  
+  if (rows.length === 0) {
+    return { imported: 0, errors: 0 };
+  }
+  
+  // Skip header row if indicated
+  const startIndex = hasHeaderRow ? 1 : 0;
+  
+  // Find or create an exam
+  let exam: Exam;
+  
+  if (isNewExam) {
+    // Create new exam
+    exam = addExam({
+      courseId,
+      tipo: examType,
+      data: examDate
+    });
+  } else {
+    // Find existing exam with same type and course
+    const exams = getExams();
+    const existingExam = exams
+      .filter(e => e.courseId === courseId && e.tipo === examType)
+      .sort((a, b) => new Date(b.data).getTime() - new Date(a.data).getTime())[0]; // most recent
+    
+    if (existingExam) {
+      exam = existingExam;
+    } else {
+      // If no existing exam found, create a new one
+      exam = addExam({
+        courseId,
+        tipo: examType,
+        data: examDate
+      });
+    }
+  }
+  
+  // Process each row
+  let imported = 0;
+  let errors = 0;
+  const students = getStudents();
+  const matricoleSet = new Set(students.map(s => s.matricola));
+  
+  for (let i = startIndex; i < rows.length; i++) {
+    const columns = rows[i].split(',').map(col => col.trim());
+    
+    try {
+      if (columns.length < 2) {
+        errors++;
+        continue;
+      }
+      
+      const matricola = columns[0];
+      
+      // Check if student exists
+      if (!matricoleSet.has(matricola)) {
+        errors++;
+        continue;
+      }
+      
+      if (examType === 'intermedio') {
+        // For intermediate exams, expect letter grade
+        const votoLettera = columns[1].toUpperCase();
+        
+        if (!['A', 'B', 'C', 'D', 'E', 'F'].includes(votoLettera)) {
+          errors++;
+          continue;
+        }
+        
+        addGrade({
+          matricola,
+          examId: exam.id,
+          votoLettera: votoLettera as LetterGrade
+        });
+      } else {
+        // For complete exams, expect numeric grade and optional lode
+        const votoNumerico = parseInt(columns[1]);
+        
+        if (isNaN(votoNumerico) || votoNumerico < 18 || votoNumerico > 30) {
+          errors++;
+          continue;
+        }
+        
+        // Check for lode (optional)
+        const conLode = columns.length > 2 ? 
+          columns[2].toLowerCase() === 'true' || columns[2] === '1' : false;
+        
+        // Only allow lode with 30
+        if (conLode && votoNumerico !== 30) {
+          errors++;
+          continue;
+        }
+        
+        addGrade({
+          matricola,
+          examId: exam.id,
+          votoNumerico,
+          conLode
+        });
+      }
+      
+      imported++;
+    } catch (error) {
+      errors++;
+    }
+  }
+  
+  return { imported, errors };
 };
 
 // Initialize with sample data if empty
